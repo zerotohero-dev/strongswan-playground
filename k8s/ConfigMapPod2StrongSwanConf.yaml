@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: strongswan-config-pod2
+data:
+  strongswan.conf: |
+    charon {
+      load_modular = yes
+      plugins {
+        include strongswan.d/charon/*.conf
+      }
+    }
+    starter {
+      config = /etc/swanctl/swanctl.conf
+    }
+    include strongswan.d/*.conf
+  swanctl.conf: |
+    connections {
+      pod2-to-pod1 {
+        local_addrs = __POD_2_IP__
+        remote_addrs = __POD_1_IP__
+        version = 2
+        proposals = aes256-sha256-modp2048
+        mobike = no
+        local {
+          auth = pubkey
+          certs = vm2.crt
+          id = "CN=vm2" 
+        }
+        remote {
+          auth = pubkey
+          certs = vm1.crt
+          id = "CN=vm1" 
+        }
+        children {
+          net-net {
+            local_ts = 0.0.0.0/0
+            remote_ts = 0.0.0.0/0
+            mode = tunnel
+          }
+        }
+      }
+    }
+    secrets {
+      private-vm2 {
+        file = /etc/swanctl/private/vm2.key
+      }
+    }
+    authorities {
+      strongswan_ca {
+        cacert = /etc/swanctl/x509ca/ca.crt
+      }
+    }

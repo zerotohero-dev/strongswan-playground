@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strongswan-pod1
+spec:
+  # serviceName: "strongswan-pod1"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: strongswan-pod1
+  template:
+    metadata:
+      labels:
+        app: strongswan-pod1
+    spec:
+      initContainers:
+        - name: init-ip-writer
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              POD_1_IP=$(hostname -i)
+              echo $POD_1_IP > /shared-data/pod1-ip.txt
+              while [ ! -f /shared-data/pod2-ip.txt ]; do
+                sleep 5
+              done
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /shared-data
+      containers:
+        - name: strongswan
+          image: v0lkan/strongswan-poc:latest
+          securityContext:
+            privileged: true
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              POD_1_IP=$(cat /shared-data/pod1-ip.txt)
+              POD_2_IP=$(cat /shared-data/pod2-ip.txt)
+              cp /etc/swanctl/swanctl-tpl.conf /etc/swanctl/swanctl.conf
+              touch /tmp/swanctl.conf.new
+              sed "s/__POD_1_IP__/$POD_1_IP/g; s/__POD_2_IP__/$POD_2_IP/g" /etc/swanctl/swanctl.conf > /tmp/swanctl.conf.new
+              mv /tmp/swanctl.conf.new /etc/swanctl/swanctl.conf
+
+              touch /start.sh
+              echo "ipsec start" > /start.sh
+              touch /load.sh
+              echo "swanctl --load-all" > /load.sh
+              touch tunnel.sh
+              echo "swanctl --initiate --child net-net" > /tunnel.sh
+              touch /status.sh
+              echo "swanctl --list-sas" > /status.sh
+              
+              while true; do
+                sleep 3600
+              done
+          volumeMounts:
+            - name: config
+              mountPath: /etc/strongswan.conf
+              subPath: strongswan.conf
+            - name: config
+              mountPath: /etc/swanctl/swanctl-tpl.conf
+              subPath: swanctl.conf
+            - name: secrets
+              mountPath: /etc/swanctl/x509ca/ca.crt
+              subPath: ca.crt
+            - name: secrets
+              mountPath: /etc/swanctl/x509/vm1.crt
+              subPath: vm1.crt
+            - name: secrets
+              mountPath: /etc/swanctl/private/vm1.key
+              subPath: vm1.key
+            - name: secrets
+              mountPath: /etc/swanctl/x509/vm2.crt
+              subPath: vm2.crt
+            - name: shared-volume
+              mountPath: /shared-data
+      volumes:
+        - name: config
+          configMap:
+            name: strongswan-config-pod1
+        - name: secrets
+          secret:
+            secretName: strongswan-certs
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: shared-volume-claim

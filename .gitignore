@@ -1,0 +1,6 @@
+/.DS_Store
+*.crt
+*.key
+*.csr
+/k8s/SecretStrongSwanCerts.yaml
+/.idea

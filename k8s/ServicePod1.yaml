@@ -1,16 +1,21 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: strongswan-pod1
-spec:
-  selector:
-    app: strongswan-pod1
-  ports:
-    - name: ike
-      protocol: UDP
-      port: 500
-      targetPort: 500
-    - name: nat-t
-      protocol: UDP
-      port: 4500
-      targetPort: 4500
+#
+# This service does not work because of how StrongSwan interacts with the network.
+# Leaving this here for reference.
+#
+
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: strongswan-pod1
+#spec:
+#  selector:
+#    app: strongswan-pod1
+#  ports:
+#    - name: ike
+#      protocol: UDP
+#      port: 500
+#      targetPort: 500
+#    - name: nat-t
+#      protocol: UDP
+#      port: 4500
+#      targetPort: 4500
